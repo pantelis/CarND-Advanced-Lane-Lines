@@ -4,33 +4,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import glob
-
+import helper
+import os
 import pickle
 
 # Read in the saved objpoints and imgpoints
-dist_pickle = pickle.load(open("camera_cal/calibration_input_pickle.p", "rb"))
-objpoints = dist_pickle["objpoints"]
-imgpoints = dist_pickle["imgpoints"]
+# Make a list of calibration images
+cal_directory = '../CarND-Camera-Calibration/calibration_wide'
+calibration_input_dict = pickle.load(open(os.path.join(cal_directory, 'calibration_input_dict.p'), 'rb'))
+objpoints = calibration_input_dict["objpoints"]
+imgpoints = calibration_input_dict["imgpoints"]
 
-# Test undistortion on an image
-img = cv2.imread('camera_cal/test_image.jpg')
+# Test removal of distortion on an image
+img = cv2.imread(os.path.join(cal_directory, 'test_image.jpg'))
 
-def cal_undistort(img, objpoints, imgpoints):
-    img_size = (img.shape[1], img.shape[0])
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size, None, None)
-    undistorted = cv2.undistort(img, mtx, dist, None, mtx)
+undistorted, mtx, dist = helper.calibration_undistort(img, objpoints, imgpoints)
 
-    # Save the camera calibration result for later use (we won't worry about rvecs / tvecs)
-    dist_pickle = {}
-    dist_pickle["mtx"] = mtx
-    dist_pickle["dist"] = dist
-    pickle.dump(dist_pickle, open("camera_cal/calibration_output_pickle.p", "wb"))
-
-    return undistorted
+# Save the camera calibration result for later use (we won't worry about rvecs / tvecs)
+calibration_output_dict = {}
+calibration_output_dict["mtx"] = mtx
+calibration_output_dict["dist"] = dist
+pickle.dump(calibration_output_dict, open(os.path.join(cal_directory, 'calibration_output_dict.p'), "wb"))
 
 # Do camera calibration given object points and image points
-undistorted = cal_undistort(img, objpoints, imgpoints)
-cv2.imwrite('camera_cal/test_undist.jpg', undistorted)
+cv2.imwrite(os.path.join(cal_directory, 'test_undist.jpg'), undistorted)
 
 f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
 f.tight_layout()
