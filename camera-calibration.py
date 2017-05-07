@@ -9,7 +9,6 @@ import os
 import pickle
 
 # Read in the saved objpoints and imgpoints
-# Make a list of calibration images
 cal_directory = '../CarND-Camera-Calibration/calibration_wide'
 calibration_input_dict = pickle.load(open(os.path.join(cal_directory, 'calibration_input_dict.p'), 'rb'))
 objpoints = calibration_input_dict["objpoints"]
