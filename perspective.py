@@ -47,28 +47,17 @@ def corners_unwarp(img, nx, ny, mtx, dist):
 
     # If corners found:
     if ret:
-        # define 4 source points
-        x_coords = imgpoints[:, :, 0]
-        y_coords = imgpoints[:, :, 1]
 
-        upperLeft = x_coords[x_coords.argmin()], y_coords[y_coords.argmin()]
-        upperRight = x_coords[x_coords.argmax()], y_coords[y_coords.argmin()]
-        lowerRight = x_coords[x_coords.argmax()], y_coords[y_coords.argmax()]
-        lowerLeft = x_coords[x_coords.argmin()], y_coords[y_coords.argmax()]
-
-        src = np.float32([upperLeft, upperRight, lowerRight, lowerLeft]).squeeze()
+        # source points are the 4 outer detected corners
         src = np.float32([imgpoints[0], imgpoints[nx-1], imgpoints[-1], imgpoints[-nx]])
 
-        # define 4 destination points
+        # destination points are 4 outer points in a reference (ideal) image
         offset = 100
-
-        #dst = np.float32([[0, 0], [800, 0], [800, 500], [0, 500]])
 
         dst = np.float32([[offset, offset], [img_size[0] - offset, offset],
                           [img_size[0] - offset, img_size[1] - offset],
                           [offset, img_size[1] - offset]])
 
-        print(src, dst)
         # get the transform matrix M
         M_perspective = cv2.getPerspectiveTransform(src, dst)
 
