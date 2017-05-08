@@ -3,57 +3,51 @@ import cv2
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import pickle
+import helper
 
 # Read in an image and grayscale it
 image = mpimg.imread('examples/signs_vehicles_xygrad.png')
 
-
-# Define a function that applies Sobel x or y,
-# then takes an absolute value and applies a threshold.
-# Note: calling your function with orient='x', thresh_min=5, thresh_max=100
-# should produce output like the example image shown above this quiz.
-def abs_sobel_thresh(img, orient='xy', mag_thresh = (0, 255)):
-
-    # Convert to grayscale - since img is read by mpimg we need to use RGB2GRAY
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-
-    # Take the derivative in x or y given orient = 'x' or 'y'
-    thresh_max = max(mag_thresh)
-    thresh_min = min(mag_thresh)
-    if orient == 'x':
-        sobel_direction = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
-        # Take the absolute value of the derivative or gradient
-        abs_sobel = np.absolute(sobel_direction)
-    elif orient == 'y':
-        sobel_direction = cv2.Sobel(gray, cv2.CV_64F, 0, 1)
-        # Take the absolute value of the derivative or gradient
-        abs_sobel = np.absolute(sobel_direction)
-    elif orient == 'xy':
-        sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
-        sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1)
-        abs_sobel = np.sqrt(sobel_x**2 + sobel_y**2)
-
-
-    # Scale to 8-bit (0 - 255) then convert to type = np.uint8
-    scaled_sobel = np.uint8(255 * abs_sobel / np.max(abs_sobel))
-
-    # Create a mask of 1's where the scaled gradient magnitude
-    # is > thresh_min and < thresh_max
-    sxbinary = np.zeros_like(scaled_sobel)
-    sxbinary[(scaled_sobel >= thresh_min) & (scaled_sobel <= thresh_max)] = 1
-
-    return sxbinary
-
-
-# Run the function
-grad_binary = abs_sobel_thresh(image, orient='xy', mag_thresh=(30, 100))
-
+# ------
+# Get the identified lines via a Sobel thresholded gradient
+grad_binary = helper.sobel_transform_threshold(image, method='gradient-magnitude', orient='xy', sobel_kernel=3, mag_thresh=(30, 100))
 # Plot the result
-f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
+f, (f1, f2) = plt.subplots(1, 2, figsize=(24, 9))
 f.tight_layout()
-ax1.imshow(image)
-ax1.set_title('Original Image', fontsize=50)
-ax2.imshow(grad_binary, cmap='gray')
-ax2.set_title('Thresholded Gradient', fontsize=50)
+f1.imshow(image)
+f1.set_title('Original Image', fontsize=30)
+f2.imshow(grad_binary, cmap='gray')
+f2.set_title('Thresholded Gradient', fontsize=30)
+plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
+plt.show()
+
+# ------
+# Get the identified lines via a Sobel thresholded gradient direction
+dir_binary = helper.sobel_transform_threshold(image, method='gradient-angle', sobel_kernel=15, angle_thresh=(0.7, 1.3))
+# Plot the result
+g, (g1, g2) = plt.subplots(1, 2, figsize=(24, 9))
+g.tight_layout()
+g1.imshow(image)
+g1.set_title('Original Image', fontsize=30)
+g2.imshow(dir_binary, cmap='gray')
+g2.set_title('Thresholded Grad. Dir.', fontsize=30)
+plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
+plt.show()
+
+# Get the identified lines via a Combination of the above methods
+combined = np.zeros_like(dir_binary)
+#combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
+combined[(grad_binary == 1) | (dir_binary == 1)] = 1
+# Plot the result
+h, ((h1, h2,), (h3, h4)) = plt.subplots(2, 2, figsize=(24, 9))
+h.tight_layout()
+h1.imshow(image)
+h1.set_title('Original', fontsize=30)
+h2.imshow(grad_binary, cmap='gray')
+h2.set_title('Grad Magnitude', fontsize=30)
+h3.imshow(dir_binary, cmap='gray')
+h3.set_title('Grad Angle', fontsize=30)
+h4.imshow(combined, cmap='gray')
+h4.set_title('Grad Mag + Angle', fontsize=30)
 plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
 plt.show()

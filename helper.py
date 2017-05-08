@@ -43,3 +43,67 @@ def calibration_undistort(img, objpoints, imgpoints):
     undistorted = cv2.undistort(img, mtx, dist, None, mtx)
 
     return undistorted, mtx, dist
+
+
+def sobel_transform_threshold(img, method='gradient-magnitude', orient='xy', sobel_kernel=3, mag_thresh=(0, 255), angle_thresh=(0.7, 1.3)):
+
+    # Convert to grayscale - since img is read by mpimg we need to use RGB2GRAY
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+    if method == 'gradient-magnitude':
+        thresh_max = max(mag_thresh)
+        thresh_min = min(mag_thresh)
+        if orient == 'x':
+            # Take the derivative in x (orient = 'x')
+            sobel_direction = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
+            # Take the absolute value of the derivative or gradient
+            abs_sobel = np.absolute(sobel_direction)
+        elif orient == 'y':
+            # Take the derivative in y (orient = 'y')
+            sobel_direction = cv2.Sobel(gray, cv2.CV_64F, 0, 1)
+            # Take the absolute value of the derivative or gradient
+            abs_sobel = np.absolute(sobel_direction)
+        elif orient == 'xy':
+            # Take the derivative in x and y (orient = 'xy')
+            sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
+            sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1)
+            abs_sobel = np.sqrt(sobel_x**2 + sobel_y**2)
+        # Scale to 8-bit (0 - 255) then convert to type = np.uint8
+        scaled_sobel = np.uint8(255 * abs_sobel / np.max(abs_sobel))
+
+        # Create a mask of 1's where the scaled gradient magnitude
+        # is > thresh_min and < thresh_max
+        sxbinary = np.zeros_like(scaled_sobel)
+        sxbinary[(scaled_sobel >= thresh_min) & (scaled_sobel <= thresh_max)] = 1
+    elif method == 'gradient-angle':
+        thresh_max = max(angle_thresh)
+        thresh_min = min(angle_thresh)
+        sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
+        sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1)
+        abs_sobelx = np.absolute(sobel_x)
+        abs_sobely = np.absolute(sobel_y)
+        grad_direction = np.arctan2(abs_sobely, abs_sobelx)
+
+        # Create a mask of 1's where the scaled gradient magnitude
+        # is > thresh_min and < thresh_max
+        sxbinary = np.zeros_like(grad_direction)
+        sxbinary[(grad_direction >= thresh_min) & (grad_direction <= thresh_max)] = 1
+
+    return sxbinary
+
+def color_space_threshold(img, channel='S', thresh=(0, 255)):
+    # Convert to HLS color space
+    img_hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+
+    # Apply a threshold to the desired channel
+    if channel == 'H':
+        channel = img_hls[:, :, 0]
+    elif channel == 'L':
+        channel = img_hls[:, :, 1]
+    elif channel == 'S':
+        channel = img_hls[:, :, 2]
+
+    binary_output = np.zeros_like(channel)
+    binary_output[(channel > thresh[0]) & (channel <= thresh[1])] = 1
+
+    return binary_output
