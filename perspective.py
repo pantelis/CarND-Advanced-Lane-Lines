@@ -17,11 +17,8 @@ dist = calibration_input_dict["dist"]
 
 
 # Read in an image - image has height 960 pixels and width 1280 pixels
-
 nx = 8  # the number of inside corners in x
 ny = 6  # the number of inside corners in y
-
-
 
 image_filenames = glob.glob(os.path.join(cal_directory, 'test_image2.jpg'))
 draw_flag = True
@@ -88,6 +85,7 @@ def corners_unwarp(img, nx, ny, mtx, dist):
 # read in each image
 for fname in image_filenames:
     img = cv2.imread(fname)
+    # since we read with cv2.imread the gray transform is BRG2GRAY inside
     warped, perspective_M = corners_unwarp(img, nx, ny, mtx, dist)
 
     h, (h1, h2) = plt.subplots(1, 2, figsize=(24, 9))
