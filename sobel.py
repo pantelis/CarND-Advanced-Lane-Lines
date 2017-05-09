@@ -8,9 +8,12 @@ import helper
 # Read in an image and grayscale it
 image = mpimg.imread('examples/signs_vehicles_xygrad.png')
 
+# Convert to grayscale - since img is read by mpimg we need to use RGB2GRAY
+gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+
 # ------
 # Get the identified lines via a Sobel thresholded gradient
-grad_binary = helper.sobel_transform_threshold(image, method='gradient-magnitude', orient='xy', sobel_kernel=3, mag_thresh=(30, 100))
+grad_binary = helper.sobel_transform_threshold(gray, method='gradient-magnitude', orient='xy', sobel_kernel=3, mag_thresh=(30, 100))
 # Plot the result
 f, (f1, f2) = plt.subplots(1, 2, figsize=(24, 9))
 f.tight_layout()
@@ -23,7 +26,7 @@ plt.show()
 
 # ------
 # Get the identified lines via a Sobel thresholded gradient direction
-dir_binary = helper.sobel_transform_threshold(image, method='gradient-angle', sobel_kernel=15, angle_thresh=(0.7, 1.3))
+dir_binary = helper.sobel_transform_threshold(gray, method='gradient-angle', sobel_kernel=15, angle_thresh=(0.7, 1.3))
 # Plot the result
 g, (g1, g2) = plt.subplots(1, 2, figsize=(24, 9))
 g.tight_layout()

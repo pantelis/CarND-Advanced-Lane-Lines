@@ -7,12 +7,12 @@ import helper
 # Read in an image, you can also try test1.jpg or test4.jpg
 image = mpimg.imread('test_images/test6.jpg')
 
+# Convert to HLS color space
+img_hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
 
 # Define a function that thresholds the S-channel of HLS
 # Use exclusive lower bound (>) and inclusive upper (<=)
-
-
-hls_binary = helper.color_space_threshold(image, channel='S', thresh=(0, 255))
+hls_binary = helper.color_space_threshold(img_hls, channel='S', thresh=(150, 255))
 
 # Plot the result
 f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
