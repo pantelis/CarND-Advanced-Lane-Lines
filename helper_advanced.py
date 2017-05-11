@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 import pickle
 
 def find_object_image_points(img, nx, ny):
@@ -55,38 +56,15 @@ def calibration_undistort(img, objpoints, imgpoints):
     return undistorted, mtx, dist
 
 
-def corners_warp(img, nx, ny, mtx, dist):
+def corners_warp(undistorted, img_size, src, dst):
 
-    # Undistort using mtx and dist
-    undistorted = cv2.undistort(img, mtx, dist, None, mtx)
+    # get the transform matrix M
+    M_perspective = cv2.getPerspectiveTransform(src, dst)
 
-    # cv2 expects image size in (width, height)
-    img_width = undistorted.shape[1]
-    img_height = undistorted.shape[0]
-    img_size = (img_width, img_height)
+    # warp your image to a top-down view
+    warped = cv2.warpPerspective(undistorted, M_perspective, img_size, flags=cv2.INTER_LINEAR)
 
-    # Find the chessboard corners
-    ret, objpoints, imgpoints = find_object_image_points(undistorted, nx, ny)
-
-    # If corners found:
-    if ret:
-        # source points are the 4 outer detected corners
-        src = np.float32([imgpoints[0], imgpoints[nx-1], imgpoints[-1], imgpoints[-nx]])
-
-        # destination points are 4 outer points in a reference (ideal) image
-        offset = 100
-
-        dst = np.float32([[offset, offset], [img_size[0] - offset, offset],
-                          [img_size[0] - offset, img_size[1] - offset],
-                          [offset, img_size[1] - offset]])
-
-        # get the transform matrix M
-        M_perspective = cv2.getPerspectiveTransform(src, dst)
-
-        # warp your image to a top-down view
-        warped = cv2.warpPerspective(undistorted, M_perspective, img_size, flags=cv2.INTER_LINEAR)
-
-    return warped, M_perspective, src, dst
+    return warped, M_perspective
 
 
 def sobel_transform_threshold(img, method='gradient-magnitude', orient='xy', sobel_kernel=3, mag_thresh=(0, 255),
@@ -136,7 +114,6 @@ def sobel_transform_threshold(img, method='gradient-magnitude', orient='xy', sob
 
 def color_space_threshold(img_hls, channel='S', thresh=(0, 255)):
 
-
     # Apply a threshold to the desired channel
     if channel == 'H':
         channel = img_hls[:, :, 0]
@@ -150,21 +127,67 @@ def color_space_threshold(img_hls, channel='S', thresh=(0, 255)):
 
     return binary_output
 
+# def project_lines(undistorted_img, warped_img, ploty, left_fitx, right_fitx)
+#
+#     '''
+#     Once you have a good measurement of the line positions in warped space, it's time to
+#     project your measurement back down onto the road! Let's suppose, as in the previous example,
+#     you have a warped binary image called warped, and you have fit the lines with a polynomial
+#     and have arrays called ploty, left_fitx and right_fitx, which represent the x and y pixel values of the lines.
+#     '''
+#
+#     # Create an image to draw the lines on
+#     warp_zero = np.zeros_like(warped).astype(np.uint8)
+#     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+#
+#     # Recast the x and y points into usable format for cv2.fillPoly()
+#     pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+#     pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+#     pts = np.hstack((pts_left, pts_right))
+#
+#     # Draw the lane onto the warped blank image
+#     cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+#
+#     # Warp the blank back to original image space using inverse perspective matrix (Minv)
+#     newwarp = cv2.warpPerspective(color_warp, Minv, (image.shape[1], image.shape[0]))
+#
+#     # Combine the result with the original image
+#     result = cv2.addWeighted(undistorted, 1, newwarp, 0.3, 0)
+#     plt.imshow(result)
 
-def process_image_advanced(image, objpoints, imgpoints, config):
+def process_image_advanced(image, objpoints, imgpoints, draw_flag):
 
     # Do camera calibration given object points and image points
     # Return the camera calibration matrix and distortion coefficients and apply a
     # distortion correction to raw images.
     undistorted, mtx, dist = calibration_undistort(image, objpoints, imgpoints)
 
-    # * Use color transforms, gradients, etc., to create a thresholded binary image.
-    # * Apply a perspective transform to rectify binary image ("birds-eye view").
-    # * Detect lane pixels and fit to find the lane boundary.
-    # * Determine the curvature of the lane and vehicle position with respect to center.
-    # * Warp the detected lane boundaries back onto the original image.
-    # * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
-    return
+    # Use color transforms and gradients to create a thresholded binary image.
+    # Convert to HLS and gray color spaces - input image is assumed to be in BGR format
+    hls = cv2.cvtColor(undistorted, cv2.COLOR_BGR2HLS)
+    gray = cv2.cvtColor(undistorted, cv2.COLOR_BGR2GRAY)
+
+    gradx_binary = sobel_transform_threshold(gray, method='gradient-magnitude', sobel_kernel=3,
+                                                    orient='x', mag_thresh=(30, 100))
+    s_binary = color_space_threshold(hls, channel='S', thresh=(170, 255))
+
+    # Combine the two binary thresholds
+    combined_binary = np.zeros_like(gradx_binary)
+    combined_binary[(s_binary == 1) | (gradx_binary == 1)] = 1
+
+    # Apply a perspective transform to rectify binary image ("birds-eye view").
+
+    warped, perspective_M, src, dst = corners_warp(combined_binary, 9, 6, mtx, dist)
+
+
+    # Detect lane pixels and fit to find the lane boundary.
+
+    # Determine the curvature of the lane and vehicle position with respect to center.
+
+    # Warp the detected lane boundaries back onto the original image.
+
+    # Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
+    return undistorted, combined_binary, warped
 
 def process_video_advanced(image, config):
 
