@@ -53,6 +53,7 @@ if __name__ == "__main__":
 
         # source points are the 4 outer detected corners
         src = np.float32([imgpoints[0], imgpoints[nx-1], imgpoints[-1], imgpoints[-nx]])
+
         # destination points are 4 outer points in a reference (ideal) image
         offset = 100
 
@@ -91,5 +92,5 @@ if __name__ == "__main__":
     h2.scatter(x_dst, y_dst, c='r')
     h2.set_title('Warped', fontsize=30)
     plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-    plt.savefig(os.path.join(test_directory, 'original-vs-warped.jpg'), bbox_inches='tight')
+    plt.savefig(os.path.join(test_directory, '../output_images/original-vs-warped.jpg'), bbox_inches='tight')
     plt.show()

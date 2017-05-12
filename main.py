@@ -63,23 +63,26 @@ if __name__ == "__main__":
 
             for fname in images:
                 image = cv2.imread(fname)
-                undistorted, combined_binary, warped = helper_advanced.process_image_advanced(image, objpoints, imgpoints, draw_flag)
+                undistorted, combined_binary, binary_warped, leftx, lefty, rightx, righty = \
+                    helper_advanced.process_image_advanced(image, objpoints, imgpoints, draw_flag)
 
                 h, ((h1, h2), (h3, h4)) = plt.subplots(2, 2, figsize=(24, 9))
                 h.tight_layout()
                 h1.imshow(undistorted)
-                h1.set_title('Original', fontsize=30)
+                h1.set_title('Original', fontsize=20)
                 h2.imshow(combined_binary)
-                h2.set_title('Binary', fontsize=30)
-                h3.imshow(warped)
-                h3.set_title('Warped', fontsize=30)
+                h2.set_title('Binary', fontsize=20)
+                h3.imshow(binary_warped)
+                h3.set_title('Warped', fontsize=20)
                 h4.imshow(combined_binary)
-                h4.set_title('Binary', fontsize=30)
+                h4.set_title('Binary', fontsize=20)
                 plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
                 plt.show()
-
-                plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
                 plt.savefig(os.path.join(cal_directory, 'original-vs-warped.jpg'), bbox_inches='tight')
+
+
+
+
 
         elif config.get('Project', 'media_type') == 'video':
 
