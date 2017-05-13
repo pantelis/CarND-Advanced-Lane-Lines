@@ -82,10 +82,14 @@ if __name__ == "__main__":
 
         elif config.get('Project', 'media_type') == 'video':
 
-            # read the project video
-            project_video_clip = VideoFileClip("./project_video.mp4")
-            project_video_output_fname = './project_video_output.mp4'
+            videos_filenames = ['./challenge_video.mp4', './harder_challenge_video.mp4']
 
-            output_clip = project_video_clip.fx(helper_advanced.process_video_advanced, objpoints, imgpoints)
+            for fname in videos_filenames:
 
-            output_clip.write_videofile(project_video_output_fname, audio=False)
+                # read the project video
+                project_video_clip = VideoFileClip(fname)
+                project_video_output_fname = 'output_' + os.path.basename(fname)
+
+                output_clip = project_video_clip.fx(helper_advanced.process_video_advanced, objpoints, imgpoints)
+
+                output_clip.write_videofile(project_video_output_fname, audio=False)

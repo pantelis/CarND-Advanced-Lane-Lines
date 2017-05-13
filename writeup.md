@@ -1,21 +1,26 @@
-## Writeup Template
+# Advanced Lane Finding
 
-### You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
+Pantelis Monogioudis
+
+NOKIA
 
 ---
 
-**Advanced Lane Finding Project**
 
-The goals / steps of this project are the following:
+This project identifies traffic lanes using the following several steps:
 
-* Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
-* Apply a distortion correction to raw images.
-* Use color transforms, gradients, etc., to create a thresholded binary image.
-* Apply a perspective transform to rectify binary image ("birds-eye view").
-* Detect lane pixels and fit to find the lane boundary.
-* Determine the curvature of the lane and vehicle position with respect to center.
-* Warp the detected lane boundaries back onto the original image.
-* Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
+* The camera used in the car is calibrated given a set of chessboard images. 
+* The calibration matrix and distortion coefficients is then used to correct the distortion of the raw images.
+* Each image/frame is then converted to an HLS and GRAY color space. The later feeds a gradient in the x direction 
+estimator. The HLS and gradient images are sutably thresholded and combined to create a binary image
+ used in the subsequent step.  
+* A perspective transform to this binary image is then applied resulting in a "birds-eye view".
+* The lane pixels are searched using a sliding window method and the identified pixels are polynomial fit to find the lane boundary.
+* The curvature of the lane and vehicle position with respect to the center point between the identified lanes is then measured.
+* Lastly the detected lane boundaries are warped back onto the original image - the final image includes also the curvature and 
+vehicle position estimates.
+
+In the following sections we provide details and results for each step individually. 
 
 [//]: # (Image References)
 
@@ -27,21 +32,11 @@ The goals / steps of this project are the following:
 [image6]: ./examples/example_output.jpg "Output"
 [video1]: ./project_video.mp4 "Video"
 
-## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
+Throughout this project we have used the `ConfigParser` module and the `config.ini` file to list all the possible configuration parameters. Also, it is worth noting that the project can be configured with either the `basic` or `advanced` lane finding algorithms. The former corresponds to the 
 
-### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
+## Camera Calibration
+The file `test_calibration.py` demonstrates the camera calibration procedure that was used. The implementation accomodates both 8x6 and 9x6 chessboard calibration images. 
 
----
-
-### Writeup / README
-
-#### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
-
-You're reading it!
-
-### Camera Calibration
-
-#### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
 The code for this step is contained in the first code cell of the IPython notebook located in "./examples/example.ipynb" (or in lines # through # of the file called `some_file.py`).  
 
