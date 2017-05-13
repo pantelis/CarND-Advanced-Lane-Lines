@@ -356,8 +356,7 @@ def process_image_advanced(image, objpoints, imgpoints):
 def process_video_advanced(clip, objpoints, imgpoints):
 
     def detect_lanes_video(image):
-        return process_image_advanced(image, objpoints, imgpoints)
+        undistorted, combined_binary, warped, projected_img = process_image_advanced(image, objpoints, imgpoints)
+        return projected_img
 
     return clip.fl_image(detect_lanes_video)
-
-    return image

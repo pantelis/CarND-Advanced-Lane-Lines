@@ -82,17 +82,10 @@ if __name__ == "__main__":
 
         elif config.get('Project', 'media_type') == 'video':
 
-            clip = VideoFileClip("./project_video.mp4")
+            # read the project video
+            project_video_clip = VideoFileClip("./project_video.mp4")
             project_video_output_fname = './project_video_output.mp4'
-            output_clip = clip.fx(helper_advanced.process_video_advanced(clip, objpoints, imgpoints))
+
+            output_clip = project_video_clip.fx(helper_advanced.process_video_advanced, objpoints, imgpoints)
+
             output_clip.write_videofile(project_video_output_fname, audio=False)
-
-
-
-
-
-
-
-            # Then you can tranform any clip with parameters:
-            new_clip1 = some_clip.fx(my_transformation, some_par1, some_par2, some_par3)
-            new_clip2 = some_clip.fx(my_transformation, other_par1, other_par2, other_par3)
