@@ -63,31 +63,36 @@ if __name__ == "__main__":
 
             for fname in images:
                 image = cv2.imread(fname)
-                undistorted, combined_binary, binary_warped, leftx, lefty, rightx, righty = \
-                    helper_advanced.process_image_advanced(image, objpoints, imgpoints, draw_flag)
+                undistorted, combined_binary, binary_warped, lined_img = \
+                    helper_advanced.process_image_advanced(image, objpoints, imgpoints)
 
                 h, ((h1, h2), (h3, h4)) = plt.subplots(2, 2, figsize=(24, 9))
                 h.tight_layout()
-                h1.imshow(undistorted)
+                h1.imshow(cv2.cvtColor(undistorted, cv2.COLOR_BGR2RGB))
                 h1.set_title('Original', fontsize=20)
                 h2.imshow(combined_binary)
                 h2.set_title('Binary', fontsize=20)
                 h3.imshow(binary_warped)
                 h3.set_title('Warped', fontsize=20)
-                h4.imshow(combined_binary)
-                h4.set_title('Binary', fontsize=20)
+                h4.imshow(lined_img)
+                h4.set_title('Detected Lanes', fontsize=20)
                 plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
                 plt.show()
                 plt.savefig(os.path.join(cal_directory, 'original-vs-warped.jpg'), bbox_inches='tight')
-
-
-
-
 
         elif config.get('Project', 'media_type') == 'video':
 
             clip = VideoFileClip("./project_video.mp4")
             project_video_output_fname = './project_video_output.mp4'
-            output_clip = clip.fl_image(helper_advanced.process_image_advanced, config)
+            output_clip = clip.fx(helper_advanced.process_video_advanced(clip, objpoints, imgpoints))
             output_clip.write_videofile(project_video_output_fname, audio=False)
 
+
+
+
+
+
+
+            # Then you can tranform any clip with parameters:
+            new_clip1 = some_clip.fx(my_transformation, some_par1, some_par2, some_par3)
+            new_clip2 = some_clip.fx(my_transformation, other_par1, other_par2, other_par3)

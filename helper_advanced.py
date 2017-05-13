@@ -1,8 +1,7 @@
 import numpy as np
 import cv2
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
-import pickle
+from moviepy.editor import VideoFileClip
+
 
 def find_object_image_points(img, nx, ny):
 
@@ -58,13 +57,14 @@ def calibration_undistort(img, objpoints, imgpoints):
 
 def corners_warp(undistorted, img_size, src, dst):
 
-    # get the transform matrix M
-    M_perspective = cv2.getPerspectiveTransform(src, dst)
+    # get the transform matrix M and its inverse
+    M = cv2.getPerspectiveTransform(src, dst)
+    M_inv = cv2.getPerspectiveTransform(dst, src)
 
     # warp your image to a top-down view
-    warped = cv2.warpPerspective(undistorted, M_perspective, img_size, flags=cv2.INTER_LINEAR)
+    warped = cv2.warpPerspective(undistorted, M, img_size, flags=cv2.INTER_LINEAR)
 
-    return warped, M_perspective
+    return warped, M, M_inv
 
 
 def sobel_transform_threshold(img, method='gradient-magnitude', orient='xy', sobel_kernel=3, mag_thresh=(0, 255),
@@ -130,21 +130,27 @@ def color_space_threshold(img_hls, channel='S', thresh=(0, 255)):
 
 def detect_lanes_histogram(binary_warped):
 
+    y_num_pixels = binary_warped.shape[0]
+    x_num_pixels = binary_warped.shape[1]
+
     # Assuming you have created a warped binary image called "binary_warped"
     # Take a histogram of the bottom half of the image
     histogram = np.sum(binary_warped[int(binary_warped.shape[0] / 2):, :], axis=0)
+
     # Create an output image to draw on and  visualize the result
     out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
+
     # Find the peak of the left and right halves of the histogram
     # These will be the starting point for the left and right lines
-    midpoint = np.int(histogram.shape[0] / 2)
-    leftx_base = np.argmax(histogram[:midpoint])
-    rightx_base = np.argmax(histogram[midpoint:]) + midpoint
+    x_midpoint = np.int(x_num_pixels / 2)
+    y_midpoint = np.int(y_num_pixels / 2)
+    leftx_base = np.argmax(histogram[:x_midpoint])
+    rightx_base = np.argmax(histogram[x_midpoint:]) + x_midpoint
 
     # Choose the number of sliding windows
     nwindows = 9
     # Set height of windows
-    window_height = np.int(binary_warped.shape[0] / nwindows)
+    window_height =    np.int(binary_warped.shape[0] / nwindows)
     # Identify the x and y positions of all nonzero pixels in the image
     nonzero = binary_warped.nonzero()
     nonzeroy = np.array(nonzero[0])
@@ -169,17 +175,21 @@ def detect_lanes_histogram(binary_warped):
         win_xleft_high = leftx_current + margin
         win_xright_low = rightx_current - margin
         win_xright_high = rightx_current + margin
+
         # Draw the windows on the visualization image
         cv2.rectangle(out_img, (win_xleft_low, win_y_low), (win_xleft_high, win_y_high), (0, 255, 0), 2)
         cv2.rectangle(out_img, (win_xright_low, win_y_low), (win_xright_high, win_y_high), (0, 255, 0), 2)
+
         # Identify the nonzero pixels in x and y within the window
         good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) & (
         nonzerox < win_xleft_high)).nonzero()[0]
         good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xright_low) & (
         nonzerox < win_xright_high)).nonzero()[0]
+
         # Append these indices to the lists
         left_lane_inds.append(good_left_inds)
         right_lane_inds.append(good_right_inds)
+
         # If you found > minpix pixels, recenter next window on their mean position
         if len(good_left_inds) > minpix:
             leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
@@ -197,88 +207,99 @@ def detect_lanes_histogram(binary_warped):
     righty = nonzeroy[right_lane_inds]
 
     # Fit a second order polynomial to each
-    left_fit = np.polyfit(lefty, leftx, 2)
-    right_fit = np.polyfit(righty, rightx, 2)
+    left_fit_coeff = np.polyfit(lefty, leftx, 2)
+    right_fit_coeff = np.polyfit(righty, rightx, 2)
 
     # Generate x and y values for plotting
-    ploty = np.linspace(0, binary_warped.shape[0] - 1, binary_warped.shape[0])
-    left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
-    right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
+    ploty = np.linspace(0, y_num_pixels - 1, y_num_pixels)
+    left_fitx = left_fit_coeff[0] * ploty ** 2 + left_fit_coeff[1] * ploty + left_fit_coeff[2]
+    right_fitx = right_fit_coeff[0] * ploty ** 2 + right_fit_coeff[1] * ploty + right_fit_coeff[2]
 
-    out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
-    out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
-    plt.imshow(out_img)
-    plt.plot(left_fitx, ploty, color='yellow')
-    plt.plot(right_fitx, ploty, color='yellow')
-    plt.xlim(0, binary_warped.shape[1])
-    plt.ylim(binary_warped.shape[0], 0)
+    out_img[lefty, leftx] = [255, 0, 0]
+    out_img[righty, rightx] = [0, 0, 255]
 
-    return leftx, lefty, rightx, righty
+    # plt.imshow(out_img)
+    # plt.plot(left_fitx, ploty, color='yellow')
+    # plt.plot(right_fitx, ploty, color='yellow')
+    # plt.xlim(0, binary_warped.shape[1])
+    # plt.ylim(binary_warped.shape[0], 0)
+
+    # Estimate the curvature
+    # Define y-value where we want radius of curvature
+    # We choose the the maximum y-value, corresponding to the bottom of the image
+    y_eval = y_num_pixels
+
+    # Define conversions in x and y from pixels space to meters
+    ym_per_pix = 30 / 720  # meters per pixel in y dimension
+    xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
+    left_curvature, right_curvature = estimate_curvature(leftx, lefty, rightx, righty, y_eval, ym_per_pix, xm_per_pix)
+
+    # You can assume the camera is mounted at the center of the car, such that the lane center
+    # is the midpoint at the bottom of the image between the two lines you've detected.
+    # The offset of the lane center from the center of the image (converted from pixels to meters)
+    # is your distance from the center of the lane.
+    offset = (abs(left_fitx[y_eval-1] - right_fitx[y_eval-1])/2.0 + left_fitx[y_eval-1] - x_midpoint) * xm_per_pix
+
+    return left_fitx, right_fitx, left_curvature, right_curvature, offset
 
 
-def estimate_curvature(leftx, lefty, rightx, righty):
+def estimate_curvature(leftx, lefty, rightx, righty, y_eval, ym_per_pix, xm_per_pix):
     # Assume that if you're projecting a section of lane, the lane is about 30
     # meters long and 3.7 meters wide. Or, if you prefer to derive a conversion from pixel space to world space in
     # your own images, compare your images with U.S. regulations that require a minimum lane width of 12 feet or 3.7
     # meters, and the dashed lane lines are 10 feet or 3 meters long each.
 
-    # Define y-value where we want radius of curvature
-    # I'll choose the maximum y-value, corresponding to the bottom of the image
-    y_eval = 720
-
-    # Define conversions in x and y from pixels space to meters
-    ym_per_pix = 30 / 720  # meters per pixel in y dimension
-    xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
-
     # Fit new polynomials to x,y in world space
 
     # Fit a second order polynomial to each
-    left_fit = np.polyfit(lefty*ym_per_pix, leftx*xm_per_pix, 2)
-    right_fit = np.polyfit(righty*ym_per_pix, rightx*xm_per_pix, 2)
+    left_fit_coeff = np.polyfit(lefty * ym_per_pix, leftx * xm_per_pix, 2)
+    right_fit_coeff = np.polyfit(righty * ym_per_pix, rightx * xm_per_pix, 2)
 
     # Calculate the new radii of curvature
-    left_curverad = ((1 + (2 * left_fit[0] * y_eval * ym_per_pix + left_fit[1]) ** 2) ** 1.5) / np.absolute(
-        2 * left_fit[0])
+    left_curverad = ((1 + (2 * left_fit_coeff[0] * y_eval * ym_per_pix + left_fit_coeff[1]) ** 2) ** 1.5) / np.absolute(
+        2 * left_fit_coeff[0])
 
-    right_curverad = ((1 + (2 * right_fit[0] * y_eval * ym_per_pix + right_fit[1]) ** 2) ** 1.5) / np.absolute(
-        2 * right_fit[0])
+    right_curverad = ((1 + (2 * right_fit_coeff[0] * y_eval * ym_per_pix + right_fit_coeff[1]) ** 2) ** 1.5) / np.absolute(
+        2 * right_fit_coeff[0])
 
     # Now our radius of curvature is in meters
-    print(left_curverad, 'm', right_curverad, 'm')
+    # print(left_curverad, 'm', right_curverad, 'm')
     # Example values: 632.1 m    626.2 m
     return left_curverad, right_curverad
 
+def project_lines(undistorted, binary_warped, left_fitx, right_fitx, Minv):
+
+    '''
+    Project from warped to world space. 
+    project your measurement back down onto the road! Let's suppose, as in the previous example,
+    you have a warped binary image called warped, and you have fit the lines with a polynomial
+    and have arrays called ploty, left_fitx and right_fitx, which represent the x and y pixel values of the lines.
+    '''
+
+    ploty = np.linspace(0, binary_warped.shape[0] - 1, binary_warped.shape[0])
+
+    # Create an image to draw the lines on
+    warp_zero = np.zeros_like(binary_warped).astype(np.uint8)
+    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+
+    # Warp the blank back to original image space using inverse perspective matrix (Minv)
+    new_warp = cv2.warpPerspective(color_warp, Minv, (undistorted.shape[1], undistorted.shape[0]))
+
+    # Combine the result with the original image
+    result = cv2.addWeighted(cv2.cvtColor(undistorted, cv2.COLOR_BGR2RGB), 1, new_warp, 0.3, 0)
+
+    return result
 
 
-# def project_lines(undistorted_img, warped_img, ploty, left_fitx, right_fitx)
-#
-#     '''
-#     Once you have a good measurement of the line positions in warped space, it's time to
-#     project your measurement back down onto the road! Let's suppose, as in the previous example,
-#     you have a warped binary image called warped, and you have fit the lines with a polynomial
-#     and have arrays called ploty, left_fitx and right_fitx, which represent the x and y pixel values of the lines.
-#     '''
-#
-#     # Create an image to draw the lines on
-#     warp_zero = np.zeros_like(warped).astype(np.uint8)
-#     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
-#
-#     # Recast the x and y points into usable format for cv2.fillPoly()
-#     pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
-#     pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
-#     pts = np.hstack((pts_left, pts_right))
-#
-#     # Draw the lane onto the warped blank image
-#     cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
-#
-#     # Warp the blank back to original image space using inverse perspective matrix (Minv)
-#     newwarp = cv2.warpPerspective(color_warp, Minv, (image.shape[1], image.shape[0]))
-#
-#     # Combine the result with the original image
-#     result = cv2.addWeighted(undistorted, 1, newwarp, 0.3, 0)
-#     plt.imshow(result)
-
-def process_image_advanced(image, objpoints, imgpoints, draw_flag):
+def process_image_advanced(image, objpoints, imgpoints):
 
     # Do camera calibration given object points and image points
     # Return the camera calibration matrix and distortion coefficients and apply a
@@ -316,20 +337,27 @@ def process_image_advanced(image, objpoints, imgpoints, draw_flag):
          [midpoint + 300, 0],
          [midpoint + 300, img_height]])
 
-    warped, perspective_M = corners_warp(combined_binary, img_size, src, dst)
-
+    warped, M, Minv = corners_warp(combined_binary, img_size, src, dst)
 
     # Detect lane pixels and fit to find the lane boundary.
-    leftx, lefty, rightx, righty = detect_lanes_histogram(warped)
-
-    # Determine the curvature of the lane and vehicle position with respect to center.
-    left_curverad, right_curverad = estimate_curvature(leftx, lefty, rightx, righty)
+    left_fitx, right_fitx, left_curvature, right_curvature, offset = detect_lanes_histogram(warped)
 
     # Warp the detected lane boundaries back onto the original image.
+    projected_img = project_lines(undistorted, warped, left_fitx, right_fitx, Minv)
+    curvature = (left_curvature + right_curvature) / 2.0
+
+    cv2.putText(projected_img, 'Curvature = ' + str(round(curvature, 0)) + ' (m)', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    cv2.putText(projected_img, 'Offset = ' + str(round(offset, 2)) + ' (m)', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
     # Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
-    return undistorted, combined_binary, warped, leftx, lefty, rightx, righty
+    return undistorted, combined_binary, warped, projected_img
 
-def process_video_advanced(image, config):
 
-    return
+def process_video_advanced(clip, objpoints, imgpoints):
+
+    def detect_lanes_video(image):
+        return process_image_advanced(image, objpoints, imgpoints)
+
+    return clip.fl_image(detect_lanes_video)
+
+    return image
