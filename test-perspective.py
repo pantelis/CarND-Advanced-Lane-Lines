@@ -75,7 +75,7 @@ if __name__ == "__main__":
              [midpoint + 300, 0],
              [midpoint + 300, img_height]])
 
-    warped, perspective_M = helper_advanced.corners_warp(undistorted, img_size, src, dst)
+    warped, M, Minv = helper_advanced.corners_warp(undistorted, img_size, src, dst)
 
     x_src = src.reshape(8, 1)[::2].squeeze()
     y_src = src.reshape(8, 1)[1::2].squeeze()
@@ -87,10 +87,10 @@ if __name__ == "__main__":
     h.tight_layout()
     h1.imshow(undistorted)
     h1.scatter(x_src, y_src, c='b')
-    h1.set_title('Original', fontsize=30)
+    h1.set_title('Original (BGR)', fontsize=30)
     h2.imshow(warped)
     h2.scatter(x_dst, y_dst, c='r')
-    h2.set_title('Warped', fontsize=30)
+    h2.set_title('Warped (RGB)', fontsize=30)
     plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-    plt.savefig(os.path.join(test_directory, '../output_images/original-vs-warped.jpg'), bbox_inches='tight')
+    plt.savefig(os.path.join('output_images', 'original_vs_warped.jpg'), bbox_inches='tight')
     plt.show()
